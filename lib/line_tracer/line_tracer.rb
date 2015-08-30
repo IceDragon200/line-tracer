@@ -2,7 +2,6 @@ require 'minil'
 require 'minil/functions'
 require 'minil/color'
 require 'fileutils'
-require 'murmurhash3'
 
 module Enumerable
   def map_with_index
