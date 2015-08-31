@@ -1,4 +1,4 @@
-require 'line_tracer/core_ext/enumerable'
+require_relative '../core_ext/enumerable'
 
 module LineTracer
   module MathUtils

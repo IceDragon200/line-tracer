@@ -1,8 +1,8 @@
 require 'minil/image'
-require 'line_tracer/point_buffer'
-require 'line_tracer/utils/color_utils'
-require 'line_tracer/utils/math_utils'
-require 'line_tracer/utils/point_utils'
+require_relative 'point_buffer'
+require_relative 'utils/color_utils'
+require_relative 'utils/math_utils'
+require_relative 'utils/point_utils'
 
 class Context
   include PointUtils

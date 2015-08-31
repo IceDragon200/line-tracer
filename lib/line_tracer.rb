@@ -1,1 +1,1 @@
-require 'line_tracer/context'
+require_relative 'line_tracer/context'

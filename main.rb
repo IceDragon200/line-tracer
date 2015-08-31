@@ -1,4 +1,5 @@
-require_relative 'lib/line_tracer/line_tracer'
+require 'fileutils'
+require_relative 'lib/line_tracer'
 
 class LsdFrag
   include ColorUtils
