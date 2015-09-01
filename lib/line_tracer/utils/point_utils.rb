@@ -47,9 +47,9 @@ module LineTracer
     def make_rect_points(x, y, w, h)
       [
         [x, y],
-        [x + w, y],
-        [x + w, y + h],
-        [x, y + h]
+        [x + w - 1, y],
+        [x + w - 1, y + h - 1],
+        [x, y + h - 1]
       ]
     end
 
