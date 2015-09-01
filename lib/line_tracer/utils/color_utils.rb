@@ -1,4 +1,5 @@
 require 'minil/color'
+require_relative '../core_ext/enumerable'
 
 module LineTracer
   module ColorUtils
@@ -9,6 +10,7 @@ module LineTracer
         return v, v, v
       end
 
+      h %= 360
       h /= 60.0      # sector 0 to 5
       i = h.floor
       f = h - i      # factorial part of h
@@ -40,8 +42,67 @@ module LineTracer
       [*hsv_to_rgb(h, s, v), 255]
     end
 
+    def color_decode(c)
+      Minil::Color.decode(c)
+    end
+
     def color_encode(ary)
       Minil::Color.encode(*ary)
+    end
+
+    def color_encode_clamped(ary)
+      color_encode(ary.map { |c| [[c, 0].max, 255].min })
+    end
+
+    def color_blend_per_channel(c1, c2, preserve_alpha = true)
+      c1a = color_decode(c1)
+      c2a = color_decode(c2)
+      c = c1a.map_with_index { |c, i| yield c, c2a[i] }
+      c[3] = c1a[3] if preserve_alpha
+      color_encode_clamped(c)
+    end
+
+    def color_blend_per_channel_norm(c1, c2)
+      color_blend_per_channel(c1, c2) do |a, b|
+        (yield(a / 255.0, b / 255.0) * 255).to_i
+      end
+    end
+
+    def color_blend_add(c1, c2)
+      color_blend_per_channel(c1, c2) { |a, b| a + b }
+    end
+
+    def color_blend_avg(c1, c2)
+      color_blend_per_channel(c1, c2) { |a, b| (a + b) / 2 }
+    end
+
+    def color_blend_sub(c1, c2)
+      color_blend_per_channel(c1, c2) { |a, b| a - b }
+    end
+
+    def color_blend_mul(c1, c2)
+      color_blend_per_channel(c1, c2) { |a, b| a * b / 255 }
+    end
+
+    def color_blend_overlay(c1, c2)
+      color_blend_per_channel_norm(c1, c2) do |a, b|
+        if a < 0.5
+          2 * (a * b)
+        else
+          1 - 2 * (1 - a) * (1 - b)
+        end
+      end
+    end
+
+    def color_blend_alpha(c1, c2, alpha = 255)
+      r1, g1, b1, a1 = color_decode(c1)
+      r2, g2, b2, a2 = color_decode(c2)
+      beta = (a2 * alpha) >> 8
+      c  = (beta > a1 ? beta : a1) << 24
+      c |= [[r1 + (((r2 - r1) * beta) >> 8), 255].min, 0].max << 16
+      c |= [[g1 + (((g2 - g1) * beta) >> 8), 255].min, 0].max <<  8
+      c |= [[b1 + (((b2 - b1) * beta) >> 8), 255].min, 0].max <<  0
+      c
     end
   end
 end
