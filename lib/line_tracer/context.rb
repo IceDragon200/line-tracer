@@ -1,4 +1,6 @@
 require 'minil/image'
+require_relative 'minil/image/draw_line'
+
 require_relative 'point_buffer'
 require_relative 'utils/color_utils'
 require_relative 'utils/math_utils'
