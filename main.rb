@@ -4,10 +4,22 @@ require 'optparse'
 require_relative 'lib/line_tracer'
 require_relative 'lib/line_tracer/core_ext/range'
 
-def frag(&block)
-  Class.new do
-    include LineTracer::ColorUtils
+include LineTracer::PointUtils
 
+class Frag
+  include LineTracer::ColorUtils
+
+  def process(options)
+    [1, 1, 1, 1]
+  end
+
+  def call(options)
+    color_encode(process(options))
+  end
+end
+
+def frag(&block)
+  Class.new(Frag) do
     class_eval(&block)
   end
 end
@@ -27,7 +39,7 @@ lsd_frag = frag do
     @rate_mod = ->(r) { r }
   end
 
-  def call(options)
+  def process(options)
     r = options[:frame]
     r = @rate_mod.call(r)
     hue = (@range.begin + (r * @range.size).to_i)
@@ -35,32 +47,32 @@ lsd_frag = frag do
     c = hsv_to_rgba(hue, @saturation, v)
     case @mode
     when :overlay
-      color_blend_overlay(color_encode(c), options[:color])
+      color_blend_overlay(c, options[:color])
     when :add
-      color_blend_add(options[:color], color_encode(c))
+      color_blend_add(options[:color], c)
     when :mul
-      color_blend_mul(options[:color], color_encode(c))
+      color_blend_mul(options[:color], c)
     when :sub
-      color_blend_sub(options[:color], color_encode(c))
+      color_blend_sub(options[:color], c)
     else
-      color_encode(c)
+      c
     end
   end
-end.new
+end
 
 gray_frag = frag do
-  def call(options)
+  def process(options)
     value = 128 + (options[:ghost] * 127).to_i
-    color_encode([value, value, value, 255])
+    [value, value, value, 255]
   end
-end.new
+end
 
-invert_wrap = ->(r) { (1 - r) % 1 }
+norm_wrap      = ->(r) { r % 1 }
+invert_wrap    = ->(r) { (1 - r) % 1 }
 ping_pong_wrap = ->(r) { (r > 1 ? 2 - r : r).abs }
-sine_wrap = ->(r) { Math.sin(Math::PI * r).abs }
-make_mul_rate = ->(a) { ->(r) { r * a } }
+sine_wrap      = ->(r) { Math.sin(Math::PI * r).abs }
+make_mul_rate  = ->(a) { ->(r) { r * a } }
 
-include LineTracer::PointUtils
 
 dirname = 'out/main'
 OptionParser.new do |opts|
@@ -70,15 +82,26 @@ OptionParser.new do |opts|
 end.parse(ARGV)
 
 cw, ch = 16, 16
-bkg = Minil::Image.load_file('autocraft.png')
-point_buffers = [
-  LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10)),
-  LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10).rotate(2)),
-  LineTracer::PointBuffer.new([[4, 6], [11, 6]], offset: 0),
-  LineTracer::PointBuffer.new([[9, 4], [9, 11]], offset: 12),
-  LineTracer::PointBuffer.new([[4, 9], [11, 9]], offset: 24),
-  LineTracer::PointBuffer.new([[6, 4], [6, 11]], offset: 36)
-]
+default_frag = lsd_frag.new
+#default_frag.range = (0...30).translate(20).translate(0)
+default_frag.range = (0...30).translate(20).translate(150)
+#default_frag.range = 0...180
+default_frag.rate_mod = sine_wrap
+default_frag.mode = :overlay
+#default_frag.mode = nil
+default_frag.value = 0.85
+default_frag.saturation = 0.8
+
+frag_prog_mid = default_frag.dup
+frag_prog_mid.range = (0..30).translate(20).translate(90)
+frag_prog_mid.mode = nil
+
+frag_prog_outer = default_frag.dup
+frag_prog_outer.range = (0..30).translate(20).translate(0)
+
+point_buffers = []
+bkg = nil
+
 
 #bkg = Minil::Image.load_file('crank_face.png')
 #point_buffers = [
@@ -112,22 +135,16 @@ point_buffers = [
 ctx = LineTracer::Context.new(cw, ch, frames: 60, rendered_frames: 12)
 ctx.upscale = 4
 ctx.vert_prog = ->(options) { options[:pos] }
-ctx.frag_prog = lsd_frag
-#ctx.frag_prog.range = (0...30).translate(20).translate(0)
-ctx.frag_prog.range = (0...30).translate(20).translate(150)
-#ctx.frag_prog.range = 0...180
-ctx.frag_prog.rate_mod = sine_wrap
-#ctx.frag_prog.mode = :overlay
-#ctx.frag_prog.mode = nil
-ctx.frag_prog.value = 0.85
-ctx.frag_prog.saturation = 0.8
+ctx.frag_prog = default_frag
 
 ctx.frame_images.each do |img|
   img.blit(bkg, 0, 0, 0, 0, bkg.width, bkg.height)
-end
+end if bkg
 
 point_buffers.each_with_index do |point_buffer, i|
-  ctx.draw(point_buffer, point_buffer.options.merge(ghost_frames: 24))
+  ctx.frag_prog = point_buffer.options[:frag_prog] || default_frag
+  opts = { ghost_frames: 24 }.merge(point_buffer.options)
+  ctx.draw(point_buffer, opts)
 end
 
 FileUtils.mkdir_p(dirname)

@@ -8,6 +8,7 @@ module LineTracer
   class Context
     include PointUtils
     include MathUtils
+    include ColorUtils
 
     attr_reader :frames
     attr_reader :frame_images
@@ -67,13 +68,13 @@ module LineTracer
           norm = frame + r * step_per_frame
           ghost_frame = frame_mod.call(index / @frames.to_f)
 
-          timng = { frame: frame, ghost: r, norm: norm, ghost_frame: ghost_frame }
+          timing = { frame: frame, ghost: r, norm: norm, ghost_frame: ghost_frame }
 
           pnt = get_point(point_buffer.frame_points, index)
           prev_p = prev_point(point_buffer.frame_points, index)
-          pnt = @vert_prog.call(timng.merge(pos: pnt))
-          prev_p = @vert_prog.call(timng.merge(pos: prev_p))
-          c = @frag_prog.call(timng.merge(color: img.get_pixel(pnt[0], pnt[1])))
+          pnt = @vert_prog.call(timing.merge(pos: pnt))
+          prev_p = @vert_prog.call(timing.merge(pos: prev_p))
+          c = @frag_prog.call(timing.merge(color: color_decode(img.get_pixel(pnt[0], pnt[1]))))
 
           draw_line prev_p, pnt do |x, y|
             img.fill_rect(x, y, @px_size, @px_size, c)
@@ -94,7 +95,7 @@ module LineTracer
         frame_names << filename
       end
 
-      File.write('to_gif.sh', "#!/usr/bin/env bash\nmake_me_a_gif -d 1x60 -f #{dirname}.gif #{frame_names.join(' ')}")
+      File.write('to_gif.sh', "#!/usr/bin/env bash\nmake_me_a_gif -d 6 -f #{dirname}.gif #{frame_names.join(' ')}")
     end
   end
 end
