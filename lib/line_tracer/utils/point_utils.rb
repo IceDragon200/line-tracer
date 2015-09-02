@@ -145,5 +145,7 @@ module LineTracer
       points4 = rotate_points_cw(points3, cw, ch)
       return points1, points2, points3, points4
     end
+
+    extend self
   end
 end

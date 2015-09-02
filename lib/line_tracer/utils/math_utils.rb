@@ -17,5 +17,7 @@ module LineTracer
         b[i] - x
       end
     end
+
+    extend self
   end
 end

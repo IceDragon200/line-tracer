@@ -103,5 +103,7 @@ module LineTracer
         (beta > a1 ? beta : a1) << 24
       ]
     end
+
+    extend self
   end
 end
