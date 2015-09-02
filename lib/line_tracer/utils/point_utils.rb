@@ -65,13 +65,7 @@ module LineTracer
     end
 
     def get_point(points, i, length = nil)
-      #return nil if i < 0
-      #return nil if points.size < i
       points[i % (length || points.size)]
-    end
-
-    def prev_point(points, i, length = nil)
-      get_point(points, i - 1, length)
     end
 
     # http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#Ruby
@@ -105,6 +99,22 @@ module LineTracer
           y += ystep
           error += deltax
         end
+      end
+    end
+
+    def draw_line_polygon(points, &block)
+      points.each_with_index do |p, i|
+        np = points[(i + 1) % points.size]
+        draw_line(p, np, &block)
+      end
+    end
+
+    def draw_line_fan(points, length, &block)
+      origin = points.first
+      rest_points = points[1, points.size]
+      rest_points.cycle.each_slice(length - 1).limited_each(rest_points.size) do |pnts|
+        pnts.unshift(origin)
+        draw_line_polygon(pnts, &block)
       end
     end
 
@@ -144,6 +154,16 @@ module LineTracer
       points3 = rotate_points_cw(points2, cw, ch)
       points4 = rotate_points_cw(points3, cw, ch)
       return points1, points2, points3, points4
+    end
+
+    def make_stage_points(points, stages)
+      stages.times.map do |i|
+        index_r = i * points.size / stages.to_f
+        index = index_r.to_i
+        norm = index_r - index
+        a, b = points[index % points.size], points[(index + 1) % points.size]
+        lerp_a(a, b, norm).map(&:round)
+      end
     end
 
     extend self

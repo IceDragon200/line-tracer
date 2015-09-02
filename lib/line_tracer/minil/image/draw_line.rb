@@ -8,11 +8,13 @@ module Minil
       self
     end
 
-    def draw_line_shape(points, color)
-      points.each_with_index do |p, i|
-        np = points[(i + 1) % points.size]
-        draw_line(p, np, color)
-      end
+    def draw_line_polygon(points, color)
+      LineTracer::PointUtils.draw_line_polygon(points) { |x, y| set_pixel(x, y, color) }
+      self
+    end
+
+    def draw_line_fan(points, length, color)
+      LineTracer::PointUtils.draw_line_fan(points, length) { |x, y| set_pixel(x, y, color) }
       self
     end
   end

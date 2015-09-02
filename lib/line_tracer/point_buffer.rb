@@ -1,7 +1,7 @@
 module LineTracer
   class PointBuffer
     attr_accessor :points
-    attr_accessor :frame_points
+    attr_accessor :stage_points
     attr_accessor :offset
     attr_accessor :options
 

@@ -18,13 +18,7 @@ class Frag
   end
 end
 
-def frag(&block)
-  Class.new(Frag) do
-    class_eval(&block)
-  end
-end
-
-lsd_frag = frag do
+class LsdFrag < Frag
   attr_accessor :range
   attr_accessor :saturation
   attr_accessor :value
@@ -40,10 +34,10 @@ lsd_frag = frag do
   end
 
   def process(options)
-    r = options[:frame]
+    r = options[:true_frame]
     r = @rate_mod.call(r)
     hue = (@range.begin + (r * @range.size).to_i)
-    v = @value * (1.0 - options[:ghost] / 2)
+    v = @value * (1.0 - options[:true_ghost] / 2)
     c = hsv_to_rgba(hue, @saturation, v)
     case @mode
     when :overlay
@@ -60,7 +54,7 @@ lsd_frag = frag do
   end
 end
 
-gray_frag = frag do
+class GrayscaleFrag < Frag
   def process(options)
     value = 128 + (options[:ghost] * 127).to_i
     [value, value, value, 255]
@@ -72,7 +66,7 @@ invert_wrap    = ->(r) { (1 - r) % 1 }
 ping_pong_wrap = ->(r) { (r > 1 ? 2 - r : r).abs }
 sine_wrap      = ->(r) { Math.sin(Math::PI * r).abs }
 make_mul_rate  = ->(a) { ->(r) { r * a } }
-
+inclusive_wrap = ->(r) { (r > 1 || r < 0) ? (r % 1) : r }
 
 dirname = 'out/main'
 OptionParser.new do |opts|
@@ -82,7 +76,7 @@ OptionParser.new do |opts|
 end.parse(ARGV)
 
 cw, ch = 16, 16
-default_frag = lsd_frag.new
+default_frag = LsdFrag.new
 #default_frag.range = (0...30).translate(20).translate(0)
 default_frag.range = (0...30).translate(20).translate(150)
 #default_frag.range = 0...180
@@ -103,10 +97,12 @@ point_buffers = []
 bkg = nil
 
 #bkg = Minil::Image.load_file('autocraft.png')
-point_buffers << LineTracer::PointBuffer.new(make_rect_points(1, 1, 14, 14).reverse, offset: 29, ghost_frames: 12, frag_prog: frag_prog_outer)
-point_buffers << LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10))
-point_buffers << LineTracer::PointBuffer.new(make_rect_points(5, 5, 6, 6), offset: 15)
-point_buffers << LineTracer::PointBuffer.new(make_rect_points(7, 7, 2, 2), offset: 30, frag_prog: frag_prog_mid)
+#point_buffers << LineTracer::PointBuffer.new(make_rect_points(1, 1, 14, 14).reverse, offset: 29, ghost_frames: 12, frag_prog: frag_prog_outer)
+point_buffers << LineTracer::PointBuffer.new(make_rect_points(1, 1, 14, 14),
+  offset: 0, ghost_frames: 0, mode: :fan, point_count: 8)
+#point_buffers << LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10))
+#point_buffers << LineTracer::PointBuffer.new(make_rect_points(5, 5, 6, 6), offset: 15)
+#point_buffers << LineTracer::PointBuffer.new(make_rect_points(7, 7, 2, 2), offset: 30, frag_prog: frag_prog_mid)
 
 #point_buffers << LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10).rotate(2))
 #point_buffers = [
@@ -127,11 +123,11 @@ point_buffers << LineTracer::PointBuffer.new(make_rect_points(7, 7, 2, 2), offse
 #bkg = Minil::Image.load_file('condenser.png')
 
 # frame outer hooks
-points1, points2, points3, points4 = make_pinwheel_from_points(make_rect_points(4, -6, 8, 8), cw, ch)
-point_buffers << LineTracer::PointBuffer.new(points1, offset:  0, ghost_frames: 24)
-point_buffers << LineTracer::PointBuffer.new(points2, offset: 15, ghost_frames: 24)
-point_buffers << LineTracer::PointBuffer.new(points3, offset: 30, ghost_frames: 24)
-point_buffers << LineTracer::PointBuffer.new(points4, offset: 45, ghost_frames: 24)
+#points1, points2, points3, points4 = make_pinwheel_from_points(make_rect_points(4, -6, 8, 8), cw, ch)
+#point_buffers << LineTracer::PointBuffer.new(points1, offset:  0, ghost_frames: 24)
+#point_buffers << LineTracer::PointBuffer.new(points2, offset: 15, ghost_frames: 24)
+#point_buffers << LineTracer::PointBuffer.new(points3, offset: 30, ghost_frames: 24)
+#point_buffers << LineTracer::PointBuffer.new(points4, offset: 45, ghost_frames: 24)
 
 #points1, points2, points3, points4 = make_pinwheel_from_points([[6, 4], [6, 3], [9, 3], [9, 6], [8, 6]], cw, ch)
 #point_buffers << LineTracer::PointBuffer.new(points1, offset: 0)
@@ -166,7 +162,7 @@ point_buffers << LineTracer::PointBuffer.new(points4, offset: 45, ghost_frames: 
 #end.compact
 #point_buffers = [LineTracer::PointBuffer.new(translate_points(make_square_helix_points(cw / 2, ch / 2, cw * ch), cw / 2, ch / 2))]
 
-ctx = LineTracer::Context.new(cw, ch, frames: 60, rendered_frames: 12)
+ctx = LineTracer::Context.new(cw, ch, frames: 64, rendered_frames: 16)
 ctx.upscale = 4
 ctx.vert_prog = ->(options) { options[:pos] }
 ctx.frag_prog = default_frag
@@ -177,7 +173,7 @@ end if bkg
 
 point_buffers.each_with_index do |point_buffer, i|
   ctx.frag_prog = point_buffer.options[:frag_prog] || default_frag
-  opts = { ghost_frames: 24 }.merge(point_buffer.options)
+  opts = { ghost_frames: 24, mode: :lines }.merge(point_buffer.options)
   ctx.draw(point_buffer, opts)
 end
 
