@@ -102,6 +102,19 @@ frag_prog_outer.range = (0..30).translate(20).translate(0)
 point_buffers = []
 bkg = nil
 
+#bkg = Minil::Image.load_file('autocraft.png')
+point_buffers << LineTracer::PointBuffer.new(make_rect_points(1, 1, 14, 14).reverse, offset: 29, ghost_frames: 12, frag_prog: frag_prog_outer)
+point_buffers << LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10))
+point_buffers << LineTracer::PointBuffer.new(make_rect_points(5, 5, 6, 6), offset: 15)
+point_buffers << LineTracer::PointBuffer.new(make_rect_points(7, 7, 2, 2), offset: 30, frag_prog: frag_prog_mid)
+
+#point_buffers << LineTracer::PointBuffer.new(make_rect_points(3, 3, 10, 10).rotate(2))
+#point_buffers = [
+#  LineTracer::PointBuffer.new([[4, 6], [11, 6]], offset: 0),
+#  LineTracer::PointBuffer.new([[9, 4], [9, 11]], offset: 12),
+#  LineTracer::PointBuffer.new([[4, 9], [11, 9]], offset: 24),
+#  LineTracer::PointBuffer.new([[6, 4], [6, 11]], offset: 36)
+#]
 
 #bkg = Minil::Image.load_file('crank_face.png')
 #point_buffers = [
@@ -110,6 +123,27 @@ bkg = nil
 #  LineTracer::PointBuffer.new(make_rect_points(4, 4, 8, 8).rotate(2)),
 #  LineTracer::PointBuffer.new(make_rect_points(6, 6, 4, 4).rotate(3)),
 #]
+
+#bkg = Minil::Image.load_file('condenser.png')
+
+# frame outer hooks
+points1, points2, points3, points4 = make_pinwheel_from_points(make_rect_points(4, -6, 8, 8), cw, ch)
+point_buffers << LineTracer::PointBuffer.new(points1, offset:  0, ghost_frames: 24)
+point_buffers << LineTracer::PointBuffer.new(points2, offset: 15, ghost_frames: 24)
+point_buffers << LineTracer::PointBuffer.new(points3, offset: 30, ghost_frames: 24)
+point_buffers << LineTracer::PointBuffer.new(points4, offset: 45, ghost_frames: 24)
+
+#points1, points2, points3, points4 = make_pinwheel_from_points([[6, 4], [6, 3], [9, 3], [9, 6], [8, 6]], cw, ch)
+#point_buffers << LineTracer::PointBuffer.new(points1, offset: 0)
+#point_buffers << LineTracer::PointBuffer.new(points2, offset: 15)
+#point_buffers << LineTracer::PointBuffer.new(points3, offset: 30)
+#point_buffers << LineTracer::PointBuffer.new(points4, offset: 45)
+
+#points1, points2, points3, points4 = make_pinwheel_from_points([[9, 6], [9, 3], [12, 3], [12, 6]], cw, ch)
+#point_buffers << LineTracer::PointBuffer.new(points1, frag_prog: frag_prog_mid, ghost_frames: 12, offset: 0)
+#point_buffers << LineTracer::PointBuffer.new(points2, frag_prog: frag_prog_mid, ghost_frames: 12, offset: 15)
+#point_buffers << LineTracer::PointBuffer.new(points3, frag_prog: frag_prog_mid, ghost_frames: 12, offset: 30)
+#point_buffers << LineTracer::PointBuffer.new(points4, frag_prog: frag_prog_mid, ghost_frames: 12, offset: 45)
 
 #point_buffers = [
 #  LineTracer::PointBuffer.new(translate_points(make_square_helix_points(cw / 2, ch / 2), cw / 2, ch / 2))

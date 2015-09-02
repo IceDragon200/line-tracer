@@ -1,5 +1,29 @@
 module LineTracer
   module PointUtils
+    def translate_points(points, ox, oy)
+      points.map do |point|
+        [point[0] + ox, point[1] + oy]
+      end
+    end
+
+    def rotate_points_cw(points, cw, ch)
+      points.map do |point|
+        [ch - point[1] - 1, point[0]]
+      end
+    end
+
+    def rotate_points_ccw(points, cw, ch)
+      points.map do |point|
+        [point[1], cw - point[0] - 1]
+      end
+    end
+
+    def scale_points(points, sx, sy = sx)
+      points.map do |point|
+        [point[0] * sx, point[1] * sy]
+      end
+    end
+
     def get_point(points, i, length = nil)
       #return nil if i < 0
       #return nil if points.size < i
@@ -75,16 +99,11 @@ module LineTracer
       points
     end
 
-    def translate_points(points, ox, oy)
-      points.map do |point|
-        [point[0] + ox, point[1] + oy]
-      end
-    end
-
-    def scale_points(points, sx, sy = sx)
-      points.map do |point|
-        [point[0] * sx, point[1] * sy]
-      end
+    def make_pinwheel_from_points(points1, cw, ch)
+      points2 = rotate_points_cw(points1, cw, ch)
+      points3 = rotate_points_cw(points2, cw, ch)
+      points4 = rotate_points_cw(points3, cw, ch)
+      return points1, points2, points3, points4
     end
   end
 end
