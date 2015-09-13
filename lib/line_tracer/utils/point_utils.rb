@@ -8,25 +8,37 @@ module LineTracer
     include PointsBuilder
     include PointsTransformer
 
+    # Calculates the bounding box for the given points
+    # This method will operate on any number of dimensions and returns it.
+    #
+    # @param [Array<Array<Integer>>] points
+    # @return [Array<Integer>]
     def calc_bb_for_points(points)
       bb = []
+      dims = points.first.size
       points.each do |point|
-        bb[0] ||= point[0]
-        bb[1] ||= point[1]
-        bb[2] ||= point[0]
-        bb[3] ||= point[1]
-
-        bb[0] = point[0] if point[0] < bb[0]
-        bb[1] = point[1] if point[1] < bb[1]
-        bb[2] = point[0] if point[0] > bb[0]
-        bb[3] = point[1] if point[1] > bb[1]
+        dims.times do |i|
+          i2 = dims + i
+          bb[i]  ||= point[i]
+          bb[i2] ||= point[i2]
+          bb[i]  = point[i] if point[i] < bb[i]
+          bb[i2] = point[i2] if point[i2] > bb[i2]
+        end
       end
       bb
     end
 
+    # Calculates the center point of the given points.
+    # This method will operate on any number of dimensions
+    #
+    # @param [Array<Array<Integer>>] points
+    # @return [Array<Integer>]
     def center_point_of(points)
+      dims = points.first.size
       bb = calc_bb_for_points(points)
-      return bb[0] + (bb[2] - bb[0]) / 2, bb[1] + (bb[3] - bb[1]) / 2
+      dims.map do |i|
+        bb[i] + (bb[dims + i] - bb[i]) / 2
+      end
     end
 
     # http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#Ruby
