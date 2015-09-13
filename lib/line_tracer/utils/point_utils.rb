@@ -64,10 +64,6 @@ module LineTracer
       points.map { |point| [point[0] * sx, point[1] * sy] }
     end
 
-    def get_point(points, i, length = nil)
-      points[i % (length || points.size)]
-    end
-
     # http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#Ruby
     def draw_line(p1, p2)
       x1, y1 = p1[0], p1[1]
