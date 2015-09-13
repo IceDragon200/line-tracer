@@ -1,4 +1,4 @@
-require '../line_tracer/utils/color_utils'
+require_relative '../utils/color_utils'
 
 module LineTracer
   class ColorBlender
