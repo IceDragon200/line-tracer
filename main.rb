@@ -61,6 +61,7 @@ class GrayscaleFrag < Frag
   end
 end
 
+identity       = ->(r) { r }
 norm_wrap      = ->(r) { r % 1 }
 invert_wrap    = ->(r) { (1 - r) % 1 }
 ping_pong_wrap = ->(r) { (r > 1 ? 2 - r : r).abs }
@@ -76,6 +77,7 @@ OptionParser.new do |opts|
 end.parse(ARGV)
 
 cw, ch = 16, 16
+scale = 1
 default_frag = LsdFrag.new
 #default_frag.range = (0...30).translate(20).translate(0)
 default_frag.range = (0...30).translate(20).translate(150)
@@ -163,7 +165,7 @@ point_buffers << LineTracer::PointBuffer.new(make_rect_points(1, 1, 14, 14),
 #point_buffers = [LineTracer::PointBuffer.new(translate_points(make_square_helix_points(cw / 2, ch / 2, cw * ch), cw / 2, ch / 2))]
 
 ctx = LineTracer::Context.new(cw, ch, frames: 64, rendered_frames: 16)
-ctx.upscale = 4
+ctx.scale = scale
 ctx.vert_prog = ->(options) { options[:pos] }
 ctx.frag_prog = default_frag
 
@@ -173,8 +175,27 @@ end if bkg
 
 point_buffers.each_with_index do |point_buffer, i|
   ctx.frag_prog = point_buffer.options[:frag_prog] || default_frag
-  opts = { ghost_frames: 24, mode: :lines }.merge(point_buffer.options)
+  opts = {
+    ghost_frames: 24,
+    mode: :lines,
+    frame_mod: inclusive_wrap
+  }.merge(point_buffer.options)
   ctx.draw(point_buffer, opts)
+end
+
+# this is done as a cleanup step for the line tracer, since line tracer has a
+# hard time drawing broken lines, masks allow you to cut the path out and redraw
+if mask
+  tmp = Minil::Image.create(ctx.width, ctx.height)
+  ctx.frame_images.each do |img|
+    tmp.clear
+    # first extract src img masked
+    tmp.mask_blit(img, mask, 0, 0, 0, 0, img.width, img.height)
+    # redraw the background
+    img.blit(bkg, 0, 0, 0, 0, bkg.width, bkg.height)
+    # draw the masked tmp back unto the image
+    img.alpha_blit(tmp, 0, 0, 0, 0, tmp.width, tmp.height)
+  end
 end
 
 FileUtils.mkdir_p(dirname)

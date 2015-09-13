@@ -12,10 +12,12 @@ module LineTracer
     include MathUtils
     include ColorUtils
 
+    attr_reader :width
+    attr_reader :height
     attr_reader :frame_images
     attr_accessor :stages
     attr_accessor :frames
-    attr_accessor :upscale
+    attr_accessor :scale
     attr_accessor :vert_prog
     attr_accessor :frag_prog
     attr_accessor :point_size
@@ -25,7 +27,7 @@ module LineTracer
       @stages = options.fetch(:stages, @frames)
       @rendered_frames = options.fetch(:rendered_frames, @stages)
       @width, @height = w, h
-      @upscale = 4
+      @scale = 1
       @point_size = 1
       create_frame_images
     end
@@ -78,13 +80,19 @@ module LineTracer
       rate_mod = options.fetch(:rate_mod) { ->(r) { r } }
       ghost_rate_mod = options.fetch(:ghost_rate_mod) { ->(r) { r } }
       # frame modifier, this normalizes a frame rate
-      frame_mod = options.fetch(:frame_mod) { ->(r) { (r > 1 || r < 0) ? (r % 1) : r } }
+      frame_mod = options.fetch(:frame_mod)
       ghost_frame_mod = options.fetch(:ghost_frame_mod, frame_mod)
       # stages - a number of intermediate points to generate from the given points
       # therefore simulating motion
       stages = options.fetch(:stages, @stages)
       # frames -
       frames = options.fetch(:frames, @frames)
+      # range - when the animation should start and when it ends
+      range = options[:range]
+      # scale frames to range
+      autoscale = options.fetch(:autoscale, true)
+
+      point_clip = options.fetch(:point_clip, false)
 
       points = if stages > 0
         if !point_buffer.stage_points || point_buffer.stage_points.size != stages
@@ -95,12 +103,16 @@ module LineTracer
         point_buffer.points
       end
 
+      frame_imgs = @frame_images
+      frame_imgs = frame_imgs[range] if range
+      frames = frames * frame_imgs.size / @frame_images.size if autoscale
+
       ghost_frames = [ghost_frames, 1].max
       offset += point_buffer.offset
+      offset_r = offset / frames.to_f
       fps = 1.0 / frames.to_f
 
-      offset_r = offset / frames.to_f
-      @frame_images.each_with_index do |img, img_frame_index|
+      frame_imgs.each_with_index do |img, img_frame_index|
         img_frame = img_frame_index / @frame_images.size.to_f
         true_frame = rate_mod.call(frames * img_frame) / frames.to_f
         stage_index = (offset + stages * img_frame).to_i
@@ -115,9 +127,14 @@ module LineTracer
           index = (frame_mod.call((offset + frame_index - j)) * frames).to_i
           stage_point_index = (ghost_frame_mod.call((ghost_rate_mod.call(stage_index - j)) / stages.to_f) * stages).to_i
 
+          stage_frame = frame_mod.call(stage_point_index / stages.to_f)
           ghost = frame_mod.call((offset - j) / ghost_frames.to_f)
           norm = frame_mod.call(frame - ghost * fps)
           ghost_frame = frame_mod.call(index / frames.to_f)
+
+          if point_clip
+            next if stage_point_index < 0 || points.size < stage_point_index
+          end
 
           # timing variables
           #   frame: current frame (with offset)
@@ -132,6 +149,7 @@ module LineTracer
             ghost: ghost,
             norm: norm,
             ghost_frame: ghost_frame,
+            stage_frame: stage_frame,
             true_frame: true_frame,
             true_ghost: true_ghost,
             true_norm: true_norm
@@ -142,9 +160,11 @@ module LineTracer
           c = @frag_prog.call(timing.merge(color: color_decode(img.get_pixel(pnt[0], pnt[1]))))
 
           pnts = (point_count - 1).times.map do |pi|
-            prev_p = get_point(points, stage_point_index - pi - 1)
+            ind = stage_point_index - pi - 1
+            next if point_clip && (ind < 0 || points.size < ind)
+            prev_p = get_point(points, ind)
             @vert_prog.call(timing.merge(pos: prev_p))
-          end
+          end.compact
           pnts << pnt
 
           case pnts.size
@@ -175,7 +195,7 @@ module LineTracer
       @frame_images.each_with_index do |img, i|
         puts "\tSAVING FRAME #{i}"
         outimg = img
-        outimg = img.upscale(@upscale) if @upscale > 1
+        outimg = img.scale(@scale) if @scale != 1
         filename = File.join(dirname, "frame_%04d.png" % i)
         File.delete(filename) if File.exist?(filename)
         outimg.save_file filename

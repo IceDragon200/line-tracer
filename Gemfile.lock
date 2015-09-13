@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/IceDragon200/ruby-minil.git
-  revision: c0eb102391b5bdd379f1d4f19848a1c09ad617ec
+  revision: 4c497615523008c001340430fb769497335df41a
   specs:
     minil (0.14.0)
       rake (~> 10.4)
@@ -30,3 +30,6 @@ PLATFORMS
 
 DEPENDENCIES
   minil!
+
+BUNDLED WITH
+   1.10.6
