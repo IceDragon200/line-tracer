@@ -41,13 +41,13 @@ class LsdFrag < Frag
     c = hsv_to_rgba(hue, @saturation, v)
     case @mode
     when :overlay
-      color_blend_overlay(c, options[:color])
+      blender.overlay(c, options[:color])
     when :add
-      color_blend_add(options[:color], c)
+      blender.add(options[:color], c)
     when :mul
-      color_blend_mul(options[:color], c)
+      blender.mul(options[:color], c)
     when :sub
-      color_blend_sub(options[:color], c)
+      blender.sub(options[:color], c)
     else
       c
     end
