@@ -1,8 +1,13 @@
 require_relative '../core_ext/math'
+require_relative 'points_builder'
+require_relative 'points_transformer'
 require 'matrix'
 
 module LineTracer
   module PointUtils
+    include PointsBuilder
+    include PointsTransformer
+
     def calc_bb_for_points(points)
       bb = []
       points.each do |point|
@@ -22,46 +27,6 @@ module LineTracer
     def center_point_of(points)
       bb = calc_bb_for_points(points)
       return bb[0] + (bb[2] - bb[0]) / 2, bb[1] + (bb[3] - bb[1]) / 2
-    end
-
-    def round_points(points)
-      points.map { |point| point.map(&:round) }
-    end
-
-    def int_points(points)
-      points.map { |point| point.map(&:to_i) }
-    end
-
-    def translate_point(point, x, y)
-      [point[0] + x, point[1] + y]
-    end
-
-    def translate_points(points, x, y)
-      points.map { |point| translate_point(point, x, y) }
-    end
-
-    def rotate_points_cw(points, cw, ch)
-      points.map { |point| [ch - point[1] - 1, point[0]] }
-    end
-
-    def rotate_points_ccw(points, cw, ch)
-      points.map { |point| [point[1], cw - point[0] - 1] }
-    end
-
-    def rotate_points(points, origin, angle)
-      rads = Math::DEG_TO_RADS * angle
-      c = Math.cos(rads)
-      s = Math.sin(rads)
-      m = Matrix[[c, s], [-s, c]]
-      ox, oy = *origin
-      points.map do |point|
-        r = m * Matrix.column_vector(translate_point(point, -ox, -oy))
-        translate_point([r[0, 0], r[1, 0]], ox, oy)
-      end
-    end
-
-    def scale_points(points, sx, sy = sx)
-      points.map { |point| [point[0] * sx, point[1] * sy] }
     end
 
     # http://rosettacode.org/wiki/Bitmap/Bresenham's_line_algorithm#Ruby
@@ -111,54 +76,6 @@ module LineTracer
       rest_points.cycle.each_slice(length - 1).limited_each(rest_points.size) do |pnts|
         pnts.unshift(origin)
         draw_line_polygon(pnts, &block)
-      end
-    end
-
-    def make_rect_points(x, y, w, h)
-      [
-        [x, y],
-        [x + w - 1, y],
-        [x + w - 1, y + h - 1],
-        [x, y + h - 1]
-      ]
-    end
-
-    # http://stackoverflow.com/questions/398299/looping-in-a-spiral
-    def make_square_helix_points(w, h, rep = nil)
-      x = y = 0
-      dx = 0
-      dy = -1
-
-      points = []
-      rep ||= [w, h].max ** 2
-      rep.times do |i|
-        wx = -w / 2
-        hy = -h / 2
-        if (wx < x && x < (w / 2)) && (hy < y && y < (h / 2))
-          points << [x, y]
-        end
-        if x == y || (x < 0 && x == -y) || (x > 0 && x == 1-y)
-          dx, dy = -dy, dx
-        end
-        x, y = x + dx, y + dy
-      end
-      points
-    end
-
-    def make_pinwheel_from_points(points1, cw, ch)
-      points2 = rotate_points_cw(points1, cw, ch)
-      points3 = rotate_points_cw(points2, cw, ch)
-      points4 = rotate_points_cw(points3, cw, ch)
-      return points1, points2, points3, points4
-    end
-
-    def make_stage_points(points, stages)
-      stages.times.map do |i|
-        index_r = i * points.size / stages.to_f
-        index = index_r.to_i
-        norm = index_r - index
-        a, b = points[index % points.size], points[(index + 1) % points.size]
-        lerp_a(a, b, norm).map(&:round)
       end
     end
 
