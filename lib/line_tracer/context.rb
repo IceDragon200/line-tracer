@@ -1,12 +1,16 @@
 require 'minil/image'
 require_relative 'minil/image/draw_line'
 
-require_relative 'point_buffer'
 require_relative 'utils/color_utils'
 require_relative 'utils/math_utils'
 require_relative 'utils/point_utils'
+require_relative 'core/color_blender'
+require_relative 'core/shape'
+require_relative 'core/entity'
+require_relative 'core/point_buffer'
 
 module LineTracer
+  # Deprecated, will be replace by Project in the future
   class Context
     include PointUtils
     include MathUtils
@@ -22,7 +26,7 @@ module LineTracer
     attr_accessor :frag_prog
     attr_accessor :point_size
 
-    def initialize(w, h, options = {})
+    def initialize(w, h, **options)
       @frames = options.fetch(:frames, 64)
       @stages = options.fetch(:stages, @frames)
       @rendered_frames = options.fetch(:rendered_frames, @stages)
@@ -53,6 +57,10 @@ module LineTracer
       else
         raise 'Unknown mode, or some custom mode...'
       end
+    end
+
+    def get_point(points, index, length = nil)
+      points[index % (length || points.size)]
     end
 
     def draw(point_buffer, **options)
