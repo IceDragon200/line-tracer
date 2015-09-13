@@ -1,12 +1,12 @@
 require_relative '../core_ext/math'
 require_relative 'points_builder'
-require_relative 'points_transformer'
+require_relative 'points_transform'
 require 'matrix'
 
 module LineTracer
   module PointUtils
     include PointsBuilder
-    include PointsTransformer
+    include PointsTransform
 
     # Calculates the bounding box for the given points
     # This method will operate on any number of dimensions and returns it.
